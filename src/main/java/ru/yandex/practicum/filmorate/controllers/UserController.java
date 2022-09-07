@@ -5,9 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.model.User;
 
-import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
-import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -19,12 +17,12 @@ public class UserController {
     private final Set<User> users = new HashSet<>();
 
     @GetMapping
-    public Set<User> getUsers(HttpServletRequest request) {
+    public Set<User> getUsers() {
         return users;
     }
 
     @PostMapping
-    public User createUser(HttpServletRequest request, @Valid @RequestBody User user) {
+    public User createUser(@Valid @RequestBody User user) {
         if (users.contains(user)) {
             log.warn("Уже существует пользователь: {}", user);
             throw new UserAlreadyExistException();
@@ -35,7 +33,7 @@ public class UserController {
     }
 
     @PutMapping
-    public User updateUser(HttpServletRequest request, @Valid @RequestBody User user) {
+    public User updateUser(@Valid @RequestBody User user) {
         if (!users.contains(user)) {
             log.warn("Не найден пользователь: {}", user);
             throw new UserNotFoundException();

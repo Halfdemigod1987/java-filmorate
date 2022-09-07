@@ -5,7 +5,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.model.Film;
 
-import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 import java.time.LocalDate;
 import java.util.HashSet;
@@ -19,12 +18,12 @@ public class FilmController {
     private final Set<Film> films = new HashSet<>();
 
     @GetMapping
-    public Set<Film> getFilms(HttpServletRequest request) {
+    public Set<Film> getFilms() {
         return films;
     }
 
     @PostMapping
-    public Film createFilm(HttpServletRequest request, @Valid @RequestBody Film film) {
+    public Film createFilm(@Valid @RequestBody Film film) {
         if (films.contains(film)) {
             log.warn("Уже существует фильм: {}", film);
             throw new FilmAlreadyExistException();
@@ -36,7 +35,7 @@ public class FilmController {
     }
 
     @PutMapping
-    public Film updateFilm(HttpServletRequest request, @Valid @RequestBody Film film) {
+    public Film updateFilm(@Valid @RequestBody Film film) {
         if (!films.contains(film)) {
             log.warn("Не найден фильм: {}", film);
             throw new FilmNotFoundException();
