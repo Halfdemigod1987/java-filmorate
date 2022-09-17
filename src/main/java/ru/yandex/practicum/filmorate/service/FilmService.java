@@ -1,5 +1,6 @@
 package ru.yandex.practicum.filmorate.service;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exceptions.NotFoundException;
@@ -10,7 +11,6 @@ import ru.yandex.practicum.filmorate.storage.FilmStorage;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -19,14 +19,10 @@ import java.util.stream.Collectors;
  */
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class FilmService {
     private final FilmStorage filmStorage;
     private final UserService userService;
-
-    public FilmService(FilmStorage filmStorage, UserService userService) {
-        this.filmStorage = filmStorage;
-        this.userService = userService;
-    }
 
     public List<Film> getFilms() {
         return filmStorage.findAll();
@@ -38,11 +34,8 @@ public class FilmService {
     }
 
     public Film updateFilm(Film film) {
-        Optional<Film> optionalFilm = filmStorage.findById(film.getId());
-        if (optionalFilm.isEmpty()) {
-            log.warn("Не найден фильм: {}", film);
-            throw new NotFoundException(String.format("Фильм с id = %d не найден для обновления",film.getId()));
-        }
+        filmStorage.findById(film.getId())
+                .orElseThrow(() -> new NotFoundException(String.format("Фильм с id = %d не найден",film.getId())));
         validate(film);
 
         return filmStorage.save(film);
@@ -55,11 +48,9 @@ public class FilmService {
     }
 
     public Film getFilmById(int filmId) {
-        Optional<Film> optionalFlm = filmStorage.findById(filmId);
-        if (optionalFlm.isEmpty()) {
-            throw new NotFoundException(String.format("Фильм с id = %d не найден для получения", filmId));
-        }
-        return optionalFlm.get();
+
+        return filmStorage.findById(filmId)
+                .orElseThrow(() -> new NotFoundException(String.format("Фильм с id = %d не найден", filmId)));
     }
 
     public void likeFilm(int filmId, int userId) {

@@ -1,5 +1,6 @@
 package ru.yandex.practicum.filmorate.service;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exceptions.NotFoundException;
@@ -8,7 +9,6 @@ import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -17,24 +17,17 @@ import java.util.Set;
  */
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class UserService {
     private final UserStorage userStorage;
-
-    public UserService(UserStorage userStorage) {
-        this.userStorage = userStorage;
-    }
 
     public List<User> getUsers() {
         return userStorage.findAll();
     }
 
     public User getUserById(int userId) {
-        Optional<User> optionalUser = userStorage.findById(userId);
-        if (optionalUser.isEmpty()) {
-            log.warn("Не найден пользователь с id: {}", userId);
-            throw new NotFoundException(String.format("Пользователь с id = %d не найден",userId));
-        }
-        return optionalUser.get();
+        return userStorage.findById(userId)
+                .orElseThrow(() -> new NotFoundException(String.format("Пользователь с id = %d не найден",userId)));
     }
 
     public User createUser(User user) {
@@ -42,11 +35,8 @@ public class UserService {
     }
 
     public User updateUser(User user) {
-        Optional<User> optionalUser = userStorage.findById(user.getId());
-        if (optionalUser.isEmpty()) {
-            log.error("Не найден пользователь: {}", user);
-            throw new NotFoundException(String.format("Пользователь с id = %d не найден",user.getId()));
-        }
+        userStorage.findById(user.getId())
+                .orElseThrow(() -> new NotFoundException(String.format("Пользователь с id = %d не найден",user.getId())));
 
         return userStorage.save(user);
     }
