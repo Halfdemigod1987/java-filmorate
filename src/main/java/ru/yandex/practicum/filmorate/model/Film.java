@@ -5,15 +5,17 @@ import lombok.EqualsAndHashCode;
 
 import javax.validation.constraints.*;
 import java.time.LocalDate;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Data
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Film {
-    private static AtomicInteger FILM_ID = new AtomicInteger();
+    private static AtomicLong FILM_ID = new AtomicLong();
 
     @EqualsAndHashCode.Include
-    private int id = FILM_ID.incrementAndGet();
+    private long id;
     @NotBlank
     private String name;
     @Size(max=200)
@@ -21,11 +23,24 @@ public class Film {
     private LocalDate releaseDate;
     @Positive
     private int duration;
+    private Set<Long> likes = new HashSet<>();
 
     public Film(String name, String description, LocalDate releaseDate, int duration) {
         this.name = name;
         this.description = description;
         this.releaseDate = releaseDate;
         this.duration = duration;
+    }
+
+    public void setId() {
+        id = FILM_ID.incrementAndGet();
+    }
+
+    public void like(long id) {
+        likes.add(id);
+    }
+
+    public void dislike(long id) {
+        likes.remove(id);
     }
 }

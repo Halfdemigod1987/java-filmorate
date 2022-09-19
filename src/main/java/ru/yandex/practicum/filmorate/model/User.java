@@ -5,15 +5,17 @@ import lombok.EqualsAndHashCode;
 
 import javax.validation.constraints.*;
 import java.time.LocalDate;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Data
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class User {
-    private static AtomicInteger USER_ID = new AtomicInteger();
+    private static AtomicLong USER_ID = new AtomicLong();
 
     @EqualsAndHashCode.Include
-    private int id = USER_ID.incrementAndGet();
+    private long id;
     @Email
     @NotBlank
     private String email;
@@ -22,6 +24,7 @@ public class User {
     private String name;
     @PastOrPresent
     private LocalDate birthday;
+    private Set<Long> friends = new HashSet<>();
 
     public User(String email, String login, String name, LocalDate birthday) {
         this.email = email;
@@ -32,5 +35,17 @@ public class User {
             this.name = name;
         }
         this.birthday = birthday;
+    }
+
+    public void setId() {
+        id = USER_ID.incrementAndGet();
+    }
+
+    public void addToFriends(long id) {
+        friends.add(id);
+    }
+
+    public void deleteFromFriends(long id) {
+        friends.remove(id);
     }
 }

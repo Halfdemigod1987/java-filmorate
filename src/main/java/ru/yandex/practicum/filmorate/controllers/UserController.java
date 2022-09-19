@@ -1,56 +1,60 @@
 package ru.yandex.practicum.filmorate.controllers;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.service.UserService;
 
 import javax.validation.Valid;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.List;
 
 @RestController
 @RequestMapping("/users")
 @Slf4j
+@RequiredArgsConstructor
 public class UserController {
 
-    private final Set<User> users = new HashSet<>();
+    private final UserService userService;
 
     @GetMapping
-    public Set<User> getUsers() {
-        return users;
+    public List<User> getUsers() {
+        return userService.getUsers();
+    }
+
+    @GetMapping("/{id}")
+    public User getUser(@PathVariable int id) {
+        return userService.getUserById(id);
     }
 
     @PostMapping
     public User createUser(@Valid @RequestBody User user) {
-        if (users.contains(user)) {
-            log.warn("Уже существует пользователь: {}", user);
-            throw new UserAlreadyExistException();
-        }
-        users.add(user);
-        log.debug("Добавлен пользователь: {}", user);
-        return user;
+        return userService.createUser(user);
     }
 
     @PutMapping
     public User updateUser(@Valid @RequestBody User user) {
-        if (!users.contains(user)) {
-            log.warn("Не найден пользователь: {}", user);
-            throw new UserNotFoundException();
-        }
-        users.remove(user);
-        users.add(user);
-        log.debug("Обновлен пользователь: {}", user);
-        return user;
+        return userService.updateUser(user);
     }
 
-    @ResponseStatus(value = HttpStatus.BAD_REQUEST)
-    public static class UserAlreadyExistException extends RuntimeException {}
+    @GetMapping("/{id}/friends")
+    public List<User> getFriends(@PathVariable int id) {
+        return userService.getUserFriends(id);
+    }
 
-    @ResponseStatus(value = HttpStatus.NOT_FOUND)
-    public static class UserNotFoundException extends RuntimeException {}
+    @GetMapping("/{id}/friends/common/{otherId}")
+    public List<User> getCommonFriends(@PathVariable int id, @PathVariable int otherId) {
+        return userService.getCommonFriends(id, otherId);
+    }
 
-    @ResponseStatus(value = HttpStatus.BAD_REQUEST)
-    public static class UserValidationException extends RuntimeException {}
+    @PutMapping("/{id}/friends/{friendId}")
+    public User addToFriends(@PathVariable int id, @PathVariable int friendId) {
+        return userService.addUserToFriends(id, friendId);
+    }
+
+    @DeleteMapping("/{id}/friends/{friendId}")
+    public User deleteToFriends(@PathVariable int id, @PathVariable int friendId) {
+        return userService.deleteUserFromFriends(id, friendId);
+    }
 
 }

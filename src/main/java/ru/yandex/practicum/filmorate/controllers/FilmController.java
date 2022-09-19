@@ -1,66 +1,54 @@
 package ru.yandex.practicum.filmorate.controllers;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.service.FilmService;
 
 import javax.validation.Valid;
-import java.time.LocalDate;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.List;
 
 @RestController
 @RequestMapping("/films")
 @Slf4j
+@RequiredArgsConstructor
 public class FilmController {
 
-    private final Set<Film> films = new HashSet<>();
+    private final FilmService filmService;
 
     @GetMapping
-    public Set<Film> getFilms() {
-        return films;
+    public List<Film> getFilms() {
+        return filmService.getFilms();
+    }
+
+    @GetMapping("/{id}")
+    public Film getFilm(@PathVariable int id) {
+        return filmService.getFilmById(id);
     }
 
     @PostMapping
     public Film createFilm(@Valid @RequestBody Film film) {
-        if (films.contains(film)) {
-            log.warn("Уже существует фильм: {}", film);
-            throw new FilmAlreadyExistException();
-        }
-        validate(film);
-        films.add(film);
-        log.debug("Добавлен фильм: {}", film);
-        return film;
+        return filmService.createFilm(film);
     }
 
     @PutMapping
     public Film updateFilm(@Valid @RequestBody Film film) {
-        if (!films.contains(film)) {
-            log.warn("Не найден фильм: {}", film);
-            throw new FilmNotFoundException();
-        }
-        validate(film);
-        films.remove(film);
-        films.add(film);
-        log.debug("Обновлен фильм: {}", film);
-        return film;
+        return filmService.updateFilm(film);
     }
 
-    private void validate(Film film) {
-        if (film.getReleaseDate().isBefore(LocalDate.of(1895, 12, 28))) {
-            log.warn("Дата релиза фильма раньше 28.12.1895: {}", film);
-            throw new FilmValidationException();
-        }
+    @GetMapping("/popular")
+    public List<Film> getPopular(@RequestParam(defaultValue = "10") Integer count) {
+        return filmService.getPopular(count);
     }
 
-    @ResponseStatus(value = HttpStatus.BAD_REQUEST)
-    public static class FilmAlreadyExistException extends RuntimeException {}
+    @PutMapping("/{id}/like/{userId}")
+    public void likeFilm(@PathVariable int id, @PathVariable int userId) {
+        filmService.likeFilm(id, userId);
+    }
 
-    @ResponseStatus(value = HttpStatus.NOT_FOUND)
-    public static class FilmNotFoundException extends RuntimeException {}
-
-    @ResponseStatus(value = HttpStatus.BAD_REQUEST)
-    public static class FilmValidationException extends RuntimeException {}
-
+    @DeleteMapping("/{id}/like/{userId}")
+    public void dislikeFilm(@PathVariable int id, @PathVariable int userId) {
+        filmService.dislikeFilm(id, userId);
+    }
 }
