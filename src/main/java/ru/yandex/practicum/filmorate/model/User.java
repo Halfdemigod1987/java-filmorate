@@ -5,8 +5,7 @@ import lombok.EqualsAndHashCode;
 
 import javax.validation.constraints.*;
 import java.time.LocalDate;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Data
@@ -24,7 +23,7 @@ public class User {
     private String name;
     @PastOrPresent
     private LocalDate birthday;
-    private Set<Long> friends = new HashSet<>();
+    private HashMap<Long, Connection> friends = new HashMap<>();
 
     public User(String email, String login, String name, LocalDate birthday) {
         this.email = email;
@@ -42,10 +41,25 @@ public class User {
     }
 
     public void addToFriends(long id) {
-        friends.add(id);
+        friends.put(id, Connection.Unconfirmed);
     }
 
     public void deleteFromFriends(long id) {
         friends.remove(id);
+    }
+
+    public enum Connection {
+        Unconfirmed("неподтверждённая "),
+        Confirmed("подтверждённая ");
+
+        private final String synonym;
+
+        Connection(String s) {
+            synonym = s;
+        }
+
+        public String toString() {
+            return this.synonym;
+        }
     }
 }

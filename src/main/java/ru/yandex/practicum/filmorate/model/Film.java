@@ -25,6 +25,10 @@ public class Film {
     private int duration;
     private Set<Long> likes = new HashSet<>();
 
+    private Set<Genre> genres = new HashSet<>();
+
+    private RatingMPA ratingMPA;
+
     public Film(String name, String description, LocalDate releaseDate, int duration) {
         this.name = name;
         this.description = description;
@@ -42,5 +46,46 @@ public class Film {
 
     public void dislike(long id) {
         likes.remove(id);
+    }
+
+    public void addGenre(Genre genre) {
+        genres.add(genre);
+    }
+
+    public void removeGenre(Genre genre) {
+        genres.remove(genre);
+    }
+
+    public enum RatingMPA {
+        G("G"), PG("PG") ,PG13("PG-13"), R("R") ,NC17("NC-17");
+
+        private final String synonym;
+
+        RatingMPA(String s) {
+            synonym = s;
+        }
+
+        public String toString() {
+            return this.synonym;
+        }
+    }
+
+    public enum Genre {
+        Comedy("Комедия"),
+        Dram("Драма"),
+        Animation("Мультфильм"),
+        Thriller("Триллер"),
+        Documentary("Документальный"),
+        Action("Боевик");
+
+        private final String synonym;
+
+        Genre(String s) {
+            synonym = s;
+        }
+
+        public String toString() {
+            return this.synonym;
+        }
     }
 }

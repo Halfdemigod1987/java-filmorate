@@ -63,15 +63,15 @@ public class UserService {
 
     public List<User> getUserFriends(int userId) {
         User user = getUserById(userId);
-        return userStorage.findById(user.getFriends());
+        return userStorage.findById(user.getFriends().keySet());
     }
 
     public List<User> getCommonFriends(int userId, int otherId) {
         User user      = getUserById(userId);
         User otherUser = getUserById(otherId);
 
-        Set<Long> intersection = new HashSet<>(user.getFriends());
-        intersection.retainAll(otherUser.getFriends());
+        Set<Long> intersection = new HashSet<>(user.getFriends().keySet());
+        intersection.retainAll(otherUser.getFriends().keySet());
 
         return userStorage.findById(intersection);
     }
