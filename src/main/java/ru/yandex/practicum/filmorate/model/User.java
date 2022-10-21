@@ -40,8 +40,8 @@ public class User {
         id = USER_ID.incrementAndGet();
     }
 
-    public void addToFriends(long id) {
-        friends.put(id, Connection.Unconfirmed);
+    public void addToFriends(long id, Connection connection) {
+        friends.put(id, connection);
     }
 
     public void deleteFromFriends(long id) {

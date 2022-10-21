@@ -1,0 +1,91 @@
+INSERT INTO genres (name)
+SELECT 'Комедия'
+WHERE NOT EXISTS
+    (   SELECT  1
+        FROM    genres
+        WHERE   name = 'Комедия'
+    );
+INSERT INTO genres (name)
+SELECT 'Драма'
+WHERE NOT EXISTS
+    (   SELECT  1
+        FROM    genres
+        WHERE   name = 'Драма'
+    );
+INSERT INTO genres (name)
+SELECT 'Мультфильм'
+WHERE NOT EXISTS
+    (   SELECT  1
+        FROM    genres
+        WHERE   name = 'Мультфильм'
+    );
+INSERT INTO genres (name)
+SELECT 'Триллер'
+WHERE NOT EXISTS
+    (   SELECT  1
+        FROM    genres
+        WHERE   name = 'Триллер'
+    );
+INSERT INTO genres (name)
+SELECT 'Документальный'
+WHERE NOT EXISTS
+    (   SELECT  1
+        FROM    genres
+        WHERE   name = 'Документальный'
+    );
+INSERT INTO genres (name)
+SELECT 'Боевик'
+WHERE NOT EXISTS
+    (   SELECT  1
+        FROM    genres
+        WHERE   name = 'Боевик'
+    );
+INSERT INTO ratings_mpa (name)
+SELECT 'G'
+WHERE NOT EXISTS
+    (   SELECT  1
+        FROM    ratings_mpa
+        WHERE   name = 'G'
+    );
+INSERT INTO ratings_mpa (name)
+SELECT 'PG'
+WHERE NOT EXISTS
+    (   SELECT  1
+        FROM    ratings_mpa
+        WHERE   name = 'PG'
+    );
+INSERT INTO ratings_mpa (name)
+SELECT 'PG-13'
+WHERE NOT EXISTS
+    (   SELECT  1
+        FROM    ratings_mpa
+        WHERE   name = 'PG-13'
+    );
+INSERT INTO ratings_mpa (name)
+SELECT 'R'
+WHERE NOT EXISTS
+    (   SELECT  1
+        FROM    ratings_mpa
+        WHERE   name = 'R'
+    );
+INSERT INTO ratings_mpa (name)
+SELECT 'NC-17'
+WHERE NOT EXISTS
+    (   SELECT  1
+        FROM    ratings_mpa
+        WHERE   name = 'NC-17'
+    );
+INSERT INTO connections (name, synonym)
+SELECT 'Unconfirmed', 'неподтверждённая'
+WHERE NOT EXISTS
+    (   SELECT  1
+        FROM    connections
+        WHERE   name = 'Unconfirmed'
+    );
+INSERT INTO connections (name, synonym)
+SELECT 'Confirmed', 'подтверждённая'
+WHERE NOT EXISTS
+    (   SELECT  1
+        FROM    connections
+        WHERE   name = 'Confirmed'
+    );

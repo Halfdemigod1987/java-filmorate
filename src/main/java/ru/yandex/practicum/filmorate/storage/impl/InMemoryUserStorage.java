@@ -1,8 +1,9 @@
-package ru.yandex.practicum.filmorate.storage;
+package ru.yandex.practicum.filmorate.storage.impl;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.storage.dao.UserStorage;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -45,5 +46,23 @@ public class InMemoryUserStorage implements UserStorage {
                 .filter(x -> ids.contains(x.getKey()))
                 .map(Map.Entry::getValue)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public User addFriend(User user, long friendId, User.Connection connection) {
+        user.addToFriends(friendId, connection);
+        return user;
+    }
+
+    @Override
+    public User updateFriend(User user, long friendId, User.Connection connection) {
+        user.addToFriends(friendId, connection);
+        return user;
+    }
+
+    @Override
+    public User deleteFriend(User user, long friendId) {
+        user.deleteFromFriends(friendId);
+        return user;
     }
 }

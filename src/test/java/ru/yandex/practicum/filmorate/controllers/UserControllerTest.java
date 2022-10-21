@@ -3,12 +3,15 @@ package ru.yandex.practicum.filmorate.controllers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.MockMvc;
 import ru.yandex.practicum.filmorate.exceptions.NotFoundException;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.service.UserService;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -19,7 +22,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
-@WebMvcTest
+@SpringBootTest
+@AutoConfigureMockMvc
+@AutoConfigureTestDatabase
 class UserControllerTest {
 
     @Autowired
@@ -27,25 +32,18 @@ class UserControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private UserService userService;
+
     @Test
     @DirtiesContext(methodMode = DirtiesContext.MethodMode.BEFORE_METHOD)
     void getUsers() throws Exception {
-        User user1 = new User("test1@yandex.ru", "login1", "name1", LocalDate.of(2000,1,1));
-        user1.setId();
-        User user2 = new User("test2@yandex.ru", "login2", "name2", LocalDate.of(1990,1,1));
-        user2.setId();
-        String list = objectMapper.writeValueAsString(List.of(user1, user2));
+        User user1 = userService.createUser(
+                new User("test1@yandex.ru", "login1", "name1", LocalDate.of(2000,1,1)));
+        User user2 = userService.createUser(
+                new User("test2@yandex.ru", "login2", "name2", LocalDate.of(1990,1,1)));
 
-        mockMvc.perform(
-                        post("/users")
-                                .content(objectMapper.writeValueAsString(user1))
-                                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
-        mockMvc.perform(
-                        post("/users")
-                                .content(objectMapper.writeValueAsString(user2))
-                                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
+        String list = objectMapper.writeValueAsString(List.of(user1, user2));
 
         mockMvc.perform(
                         get("/users"))
@@ -54,6 +52,7 @@ class UserControllerTest {
     }
 
     @Test
+    @DirtiesContext(methodMode = DirtiesContext.MethodMode.BEFORE_METHOD)
     void createUser() throws Exception {
         User user = new User("test@yandex.ru", "login", "name", LocalDate.of(2000,1,1));
         mockMvc.perform(
@@ -66,6 +65,14 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.name").value("name"))
                 .andExpect(jsonPath("$.login").value("login"))
                 .andExpect(jsonPath("$.birthday").value(LocalDate.of(2000,1,1).toString()));
+
+        User result = userService.getUserById(1);
+
+        assertEquals(user.getEmail(), result.getEmail());
+        assertEquals(user.getName(), result.getName());
+        assertEquals(user.getLogin(), result.getLogin());
+        assertEquals(user.getBirthday(), result.getBirthday());
+
     }
 
     @Test
@@ -114,13 +121,8 @@ class UserControllerTest {
     @Test
     void updateUser() throws Exception {
 
-        User user = new User("test@yandex.ru", "login", "name", LocalDate.of(2000,1,1));
-        user.setId();
-        mockMvc.perform(
-                        post("/users")
-                                .content(objectMapper.writeValueAsString(user))
-                                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
+        User user = userService.createUser(
+                new User("test@yandex.ru", "login", "name", LocalDate.of(2000,1,1)));
 
         user.setName("updated name");
         user.setLogin("updated login");
@@ -137,6 +139,13 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.name").value("updated name"))
                 .andExpect(jsonPath("$.login").value("updated login"))
                 .andExpect(jsonPath("$.birthday").value(LocalDate.of(1990,1,1).toString()));
+
+        User result = userService.getUserById(user.getId());
+
+        assertEquals(user.getEmail(), result.getEmail());
+        assertEquals(user.getName(), result.getName());
+        assertEquals(user.getLogin(), result.getLogin());
+        assertEquals(user.getBirthday(), result.getBirthday());
 
     }
 
@@ -155,15 +164,10 @@ class UserControllerTest {
 
     @Test
     void getUser() throws Exception {
-        User user = new User("test1@yandex.ru", "login1", "name1", LocalDate.of(2000,1,1));
-        user.setId();
-        String json = objectMapper.writeValueAsString(user);
+        User user = userService.createUser(
+                new User("test1@yandex.ru", "login1", "name1", LocalDate.of(2000,1,1)));
 
-        mockMvc.perform(
-                        post("/users")
-                                .content(json)
-                                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
+        String json = objectMapper.writeValueAsString(user);
 
         mockMvc.perform(
                         get("/users/" + user.getId()))
@@ -173,14 +177,6 @@ class UserControllerTest {
 
     @Test
     void getUserFailNotFound() throws Exception {
-        User user = new User("test1@yandex.ru", "login1", "name1", LocalDate.of(2000,1,1));
-        user.setId();
-
-        mockMvc.perform(
-                        post("/users")
-                                .content(objectMapper.writeValueAsString(user))
-                                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
 
         mockMvc.perform(
                         get("/users/-1"))
@@ -190,47 +186,39 @@ class UserControllerTest {
 
     @Test
     void addToFriends() throws Exception {
-        User user = new User("test1@yandex.ru", "login1", "name1", LocalDate.of(2000,1,1));
-        user.setId();
+        User user = userService.createUser(
+                new User("test1@yandex.ru", "login1", "name1", LocalDate.of(2000,1,1)));
 
-        User otherUser = new User("test2@yandex.ru", "login2", "name2", LocalDate.of(2001,2,2));
-        otherUser.setId();
-
-        mockMvc.perform(
-                        post("/users")
-                                .content(objectMapper.writeValueAsString(user))
-                                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
-        mockMvc.perform(
-                        post("/users")
-                                .content(objectMapper.writeValueAsString(otherUser))
-                                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
+        User otherUser = userService.createUser(
+                new User("test2@yandex.ru", "login2", "name2", LocalDate.of(2001,2,2)));
 
         mockMvc.perform(
                         put("/users/" + user.getId() + "/friends/" + otherUser.getId()))
                 .andExpect(status().isOk());
 
+        List<User> result = userService.getUserFriends(user.getId());
+
+        assertTrue(result.contains(otherUser));
+        assertEquals(1, result.size());
+
+        User resultUser = userService.getUserById(user.getId());
+
+        assertEquals(User.Connection.Unconfirmed, resultUser.getFriends().get(otherUser.getId()));
+
+        mockMvc.perform(
+                        put("/users/" + otherUser.getId() + "/friends/" + user.getId()))
+                .andExpect(status().isOk());
+
+        resultUser = userService.getUserById(user.getId());
+
+        assertEquals(User.Connection.Confirmed, resultUser.getFriends().get(otherUser.getId()));
+
     }
 
     @Test
     void addToFriendsFailNotFound() throws Exception {
-        User user = new User("test1@yandex.ru", "login1", "name1", LocalDate.of(2000,1,1));
-        user.setId();
-
-        User otherUser = new User("test2@yandex.ru", "login2", "name2", LocalDate.of(2001,2,2));
-        otherUser.setId();
-
-        mockMvc.perform(
-                        post("/users")
-                                .content(objectMapper.writeValueAsString(user))
-                                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
-        mockMvc.perform(
-                        post("/users")
-                                .content(objectMapper.writeValueAsString(otherUser))
-                                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
+        User user = userService.createUser(
+                new User("test1@yandex.ru", "login1", "name1", LocalDate.of(2000,1,1)));
 
         mockMvc.perform(
                         put("/users/" + user.getId() + "/friends/-1"))
@@ -240,54 +228,27 @@ class UserControllerTest {
 
     @Test
     void removeFromFriends() throws Exception {
-        User user = new User("test1@yandex.ru", "login1", "name1", LocalDate.of(2000,1,1));
-        user.setId();
+        User user = userService.createUser(
+                new User("test1@yandex.ru", "login1", "name1", LocalDate.of(2000,1,1)));
 
-        User otherUser = new User("test2@yandex.ru", "login2", "name2", LocalDate.of(2001,2,2));
-        otherUser.setId();
+        User otherUser = userService.createUser(
+                new User("test2@yandex.ru", "login2", "name2", LocalDate.of(2001,2,2)));
 
-        mockMvc.perform(
-                        post("/users")
-                                .content(objectMapper.writeValueAsString(user))
-                                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
-        mockMvc.perform(
-                        post("/users")
-                                .content(objectMapper.writeValueAsString(otherUser))
-                                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
-
-        mockMvc.perform(
-                        put("/users/" + user.getId() + "/friends/" + otherUser.getId()))
-                .andExpect(status().isOk());
+        userService.addUserToFriends(user.getId(), otherUser.getId());
 
         mockMvc.perform(
                         delete("/users/" + user.getId() + "/friends/" + otherUser.getId()))
                 .andExpect(status().isOk());
+
+        List<User> result = userService.getUserFriends(user.getId());
+
+        assertEquals(0, result.size());
     }
 
     @Test
     void removeFromFriendsFailNotFound() throws Exception {
-        User user = new User("test1@yandex.ru", "login1", "name1", LocalDate.of(2000,1,1));
-        user.setId();
-
-        User otherUser = new User("test2@yandex.ru", "login2", "name2", LocalDate.of(2001,2,2));
-        otherUser.setId();
-
-        mockMvc.perform(
-                        post("/users")
-                                .content(objectMapper.writeValueAsString(user))
-                                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
-        mockMvc.perform(
-                        post("/users")
-                                .content(objectMapper.writeValueAsString(otherUser))
-                                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
-
-        mockMvc.perform(
-                        put("/users/" + user.getId() + "/friends/" + otherUser.getId()))
-                .andExpect(status().isOk());
+        User user = userService.createUser(
+                new User("test1@yandex.ru", "login1", "name1", LocalDate.of(2000,1,1)));
 
         mockMvc.perform(
                         delete("/users/" + user.getId() + "/friends/-1"))
@@ -297,37 +258,17 @@ class UserControllerTest {
 
     @Test
     void getFriends() throws Exception {
-        User user1 = new User("test1@yandex.ru", "login1", "name1", LocalDate.of(2000,1,1));
-        user1.setId();
+        User user1 = userService.createUser(
+                new User("test1@yandex.ru", "login1", "name1", LocalDate.of(2000,1,1)));
 
-        User user2 = new User("test2@yandex.ru", "login2", "name2", LocalDate.of(2001,2,2));
-        user2.setId();
+        User user2 = userService.createUser(
+                new User("test2@yandex.ru", "login2", "name2", LocalDate.of(2001,2,2)));
 
-        User user3 = new User("test3@yandex.ru", "login3", "name3", LocalDate.of(2002,3,3));
-        user3.setId();
+        User user3 = userService.createUser(
+                new User("test3@yandex.ru", "login3", "name3", LocalDate.of(2002,3,3)));
 
-        mockMvc.perform(
-                        post("/users")
-                                .content(objectMapper.writeValueAsString(user1))
-                                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
-        mockMvc.perform(
-                        post("/users")
-                                .content(objectMapper.writeValueAsString(user2))
-                                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
-        mockMvc.perform(
-                        post("/users")
-                                .content(objectMapper.writeValueAsString(user3))
-                                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
-
-        mockMvc.perform(
-                        put("/users/" + user1.getId() + "/friends/" + user2.getId()))
-                .andExpect(status().isOk());
-        mockMvc.perform(
-                        put("/users/" + user1.getId() + "/friends/" + user3.getId()))
-                .andExpect(status().isOk());
+        userService.addUserToFriends(user1.getId(), user2.getId());
+        userService.addUserToFriends(user1.getId(), user3.getId());
 
         mockMvc.perform(
                         get("/users/ " + user1.getId() + "/friends"))
@@ -339,51 +280,35 @@ class UserControllerTest {
 
         mockMvc.perform(
                         get("/users/ " + user2.getId() + "/friends"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.[0].id").value(user1.getId()))
-                .andExpect(jsonPath("$", hasSize(1)));
+                .andExpect(jsonPath("$", hasSize(0)));
 
     }
 
     @Test
     void getCommonFriends() throws Exception {
-        User user1 = new User("test1@yandex.ru", "login1", "name1", LocalDate.of(2000,1,1));
-        user1.setId();
+        User user1 = userService.createUser(
+                new User("test1@yandex.ru", "login1", "name1", LocalDate.of(2000,1,1)));
 
-        User user2 = new User("test2@yandex.ru", "login2", "name2", LocalDate.of(2001,2,2));
-        user2.setId();
+        User user2 = userService.createUser(
+                new User("test2@yandex.ru", "login2", "name2", LocalDate.of(2001,2,2)));
 
-        User user3 = new User("test3@yandex.ru", "login3", "name3", LocalDate.of(2002,3,3));
-        user3.setId();
+        User user3 = userService.createUser(
+                new User("test3@yandex.ru", "login3", "name3", LocalDate.of(2002,3,3)));
 
-        mockMvc.perform(
-                        post("/users")
-                                .content(objectMapper.writeValueAsString(user1))
-                                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
-        mockMvc.perform(
-                        post("/users")
-                                .content(objectMapper.writeValueAsString(user2))
-                                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
-        mockMvc.perform(
-                        post("/users")
-                                .content(objectMapper.writeValueAsString(user3))
-                                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
+        userService.addUserToFriends(user1.getId(), user3.getId());
+        userService.addUserToFriends(user2.getId(), user3.getId());
 
         mockMvc.perform(
-                        put("/users/" + user1.getId() + "/friends/" + user2.getId()))
-                .andExpect(status().isOk());
-        mockMvc.perform(
-                        put("/users/" + user1.getId() + "/friends/" + user3.getId()))
-                .andExpect(status().isOk());
-
-        mockMvc.perform(
-                        get("/users/ " + user2.getId() + "/friends/common/" + user3.getId()))
+                        get("/users/ " + user1.getId() + "/friends/common/" + user2.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.[0].id").value(user1.getId()))
+                .andExpect(jsonPath("$.[0].id").value(user3.getId()))
                 .andExpect(jsonPath("$", hasSize(1)));
+
+        List<User> result = userService.getCommonFriends(user1.getId(), user2.getId());
+
+        assertEquals(user3.getId(), result.get(0).getId());
+        assertEquals(1, result.size());
+
     }
 
 }
