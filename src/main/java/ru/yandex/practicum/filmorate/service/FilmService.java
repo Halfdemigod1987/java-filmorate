@@ -6,8 +6,7 @@ import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exceptions.NotFoundException;
 import ru.yandex.practicum.filmorate.exceptions.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
-import ru.yandex.practicum.filmorate.model.User;
-import ru.yandex.practicum.filmorate.storage.FilmStorage;
+import ru.yandex.practicum.filmorate.storage.dao.FilmStorage;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -47,24 +46,28 @@ public class FilmService {
         }
     }
 
-    public Film getFilmById(int filmId) {
+    public Film getFilmById(long filmId) {
 
         return filmStorage.findById(filmId)
                 .orElseThrow(() -> new NotFoundException(String.format("Фильм с id = %d не найден", filmId)));
     }
 
-    public void likeFilm(int filmId, int userId) {
+    public Film likeFilm(long filmId, long userId) {
         Film film = getFilmById(filmId);
-        User user = userService.getUserById(userId);
-        film.like(user.getId());
-        updateFilm(film);
+        userService.getUserById(userId);
+        if (!film.getLikes().contains((long) userId)) {
+            filmStorage.addLike(film, userId);
+        }
+        return film;
     }
 
-    public void dislikeFilm(int filmId, int userId) {
+    public Film dislikeFilm(long filmId, long userId) {
         Film film = getFilmById(filmId);
-        User user = userService.getUserById(userId);
-        film.dislike(user.getId());
-        updateFilm(film);
+        userService.getUserById(userId);
+        if (film.getLikes().contains((long) userId)) {
+            filmStorage.deleteLike(film, userId);
+        }
+        return film;
     }
 
     public List<Film> getPopular(int count) {
