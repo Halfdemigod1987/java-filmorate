@@ -203,15 +203,10 @@ class UserControllerTest {
 
         User resultUser = userService.getUserById(user.getId());
 
-        assertEquals(User.Connection.Unconfirmed, resultUser.getFriends().get(otherUser.getId()));
-
-        mockMvc.perform(
-                        put("/users/" + otherUser.getId() + "/friends/" + user.getId()))
-                .andExpect(status().isOk());
-
-        resultUser = userService.getUserById(user.getId());
-
-        assertEquals(User.Connection.Confirmed, resultUser.getFriends().get(otherUser.getId()));
+        assertEquals(User.ConnectionType.Unconfirmed, resultUser.getFriends().stream()
+                .filter(friend -> friend.getFriendId() == otherUser.getId())
+                .findFirst()
+                .orElseThrow().getConnectionType());
 
     }
 

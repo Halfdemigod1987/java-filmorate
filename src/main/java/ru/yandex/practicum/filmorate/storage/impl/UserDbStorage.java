@@ -69,23 +69,23 @@ public class UserDbStorage implements UserStorage {
     }
 
     @Override
-    public User addFriend(User user, long friendId, User.Connection connection) {
+    public User addFriend(User user, User.Friend friend) {
 
-        String sqlQuery = "insert into user_friends(user_id, friend_id, connection_id) " +
+        String sqlQuery = "insert into user_friends(user_id, friend_id, connection) " +
                 "values (?, ?, ?)";
-        jdbcTemplate.update(sqlQuery, user.getId(), friendId, connection.name());
-        user.addToFriends(friendId, connection);
+        jdbcTemplate.update(sqlQuery, user.getId(), friend.getFriendId(), friend.getConnectionType().name());
+        user.addToFriends(friend);
 
         return user;
     }
 
     @Override
-    public User updateFriend(User user, long friendId, User.Connection connection) {
+    public User updateFriend(User user, User.Friend friend) {
 
-        String sqlQuery = "update user_friends set connection_id = ? " +
+        String sqlQuery = "update user_friends set connection = ? " +
                 "where user_friends.user_id = ? and user_friends.friend_id = ?";
-        jdbcTemplate.update(sqlQuery, connection.name(), user.getId(), friendId);
-        user.addToFriends(friendId, connection);
+        jdbcTemplate.update(sqlQuery, friend.getConnectionType().name(), user.getId(), friend.getFriendId());
+        user.addToFriends(friend);
 
         return user;
     }
@@ -103,18 +103,18 @@ public class UserDbStorage implements UserStorage {
     @Override
     public List<User> findAll() {
 
-        HashMap<Long, HashMap<Long, User.Connection>> friends = getUsersFriends();
+        HashMap<Long, Set<User.Friend>> friends = getUsersFriends();
 
         String sqlQuery = "select id, email, login, name,  birthday from users";
         return jdbcTemplate.queryForStream(sqlQuery, this::mapRowToUser)
-                .peek(user -> user.setFriends(friends.getOrDefault(user.getId(), new HashMap<>())))
+                .peek(user -> user.setFriends(friends.getOrDefault(user.getId(), new HashSet<>())))
                 .collect(Collectors.toList());
     }
 
     @Override
     public Optional<User> findById(long id) {
 
-        final HashMap<Long, User.Connection> friends = getUserFriends(id);
+        final Set<User.Friend> friends = getUserFriends(id);
 
         String sqlQuery = "select id, email, login, name,  birthday " +
                 "from users where id = ?";
@@ -130,7 +130,7 @@ public class UserDbStorage implements UserStorage {
             return new ArrayList<>();
         }
 
-        final HashMap<Long, HashMap<Long, User.Connection>> friends = getUsersFriends(ids);
+        final HashMap<Long, Set<User.Friend>> friends = getUsersFriends(ids);
 
         String inSql = String.join(",", Collections.nCopies(ids.size(), "?"));
         String sqlQuery = String.format("select id, email, login, name,  birthday " +
@@ -140,33 +140,35 @@ public class UserDbStorage implements UserStorage {
                 .collect(Collectors.toList());
     }
 
-    private HashMap<Long, User.Connection> getUserFriends(long id) {
+    private Set<User.Friend> getUserFriends(long id) {
 
-        String sqlQuery = "select friend_id, connection_id " +
+        String sqlQuery = "select friend_id, connection " +
                 "from user_friends where user_id = ?";
         return jdbcTemplate.query(sqlQuery, rs -> {
-            HashMap<Long, User.Connection> map = new HashMap<>();
+            Set<User.Friend> friend = new HashSet<>();
             while(rs.next()){
-                map.put(rs.getLong("friend_id"),
-                        User.Connection.valueOf(rs.getString("connection_id")));
+                friend.add(new User.Friend(
+                        id,
+                                rs.getLong("friend_id"),
+                                User.ConnectionType.valueOf(rs.getString("connection"))));
             }
-            return map;
+            return friend;
         }, id);
     }
 
-    private HashMap<Long, HashMap<Long, User.Connection>> getUsersFriends() {
+    private HashMap<Long, Set<User.Friend>> getUsersFriends() {
 
-        String sqlQuery = "select user_id, friend_id, connection_id from user_friends";
+        String sqlQuery = "select user_id, friend_id, connection from user_friends";
 
         return jdbcTemplate.query(
                 sqlQuery,
                 UserDbStorage::extractFriends);
     }
 
-    private HashMap<Long, HashMap<Long, User.Connection>> getUsersFriends(Set<Long> ids) {
+    private HashMap<Long, Set<User.Friend>> getUsersFriends(Set<Long> ids) {
 
         String inSql = String.join(",", Collections.nCopies(ids.size(), "?"));
-        String sqlQuery = String.format("select user_id, friend_id, connection_id " +
+        String sqlQuery = String.format("select user_id, friend_id, connection " +
                 "from user_friends where user_id IN (%s)", inSql);
 
         return jdbcTemplate.query(
@@ -186,19 +188,21 @@ public class UserDbStorage implements UserStorage {
         return user;
     }
 
-    private static HashMap<Long, HashMap<Long, User.Connection>> extractFriends(ResultSet rs) throws SQLException {
-        HashMap<Long, HashMap<Long, User.Connection>> map = new HashMap<>();
+    private static HashMap<Long, Set<User.Friend>> extractFriends(ResultSet rs) throws SQLException {
+        HashMap<Long, Set<User.Friend>> map = new HashMap<>();
         while (rs.next()) {
             if (map.containsKey(rs.getLong("user_id"))) {
                 map.get(rs.getLong("user_id"))
-                        .put(
+                        .add(new User.Friend(
+                                rs.getLong("user_id"),
                                 rs.getLong("friend_id"),
-                                User.Connection.valueOf(rs.getString("connection_id")));
+                                User.ConnectionType.valueOf(rs.getString("connection"))));
             } else {
-                HashMap<Long, User.Connection> friend = new HashMap<>();
-                friend.put(
+                Set<User.Friend> friend = new HashSet<>();
+                friend.add(new User.Friend(
+                        rs.getLong("user_id"),
                         rs.getLong("friend_id"),
-                        User.Connection.valueOf(rs.getString("connection_id")));
+                        User.ConnectionType.valueOf(rs.getString("connection"))));
                 map.put(rs.getLong("user_id"), friend);
             }
         }

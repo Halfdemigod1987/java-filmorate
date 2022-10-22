@@ -75,17 +75,3 @@ WHERE NOT EXISTS
         FROM    ratings_mpa
         WHERE   name = 'NC-17'
     );
-INSERT INTO connections (name, synonym)
-SELECT 'Unconfirmed', 'неподтверждённая'
-WHERE NOT EXISTS
-    (   SELECT  1
-        FROM    connections
-        WHERE   name = 'Unconfirmed'
-    );
-INSERT INTO connections (name, synonym)
-SELECT 'Confirmed', 'подтверждённая'
-WHERE NOT EXISTS
-    (   SELECT  1
-        FROM    connections
-        WHERE   name = 'Confirmed'
-    );
