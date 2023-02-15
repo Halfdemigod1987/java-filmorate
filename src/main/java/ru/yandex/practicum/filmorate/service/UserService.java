@@ -5,11 +5,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exceptions.NotFoundException;
 import ru.yandex.practicum.filmorate.model.User;
-import ru.yandex.practicum.filmorate.storage.UserStorage;
+import ru.yandex.practicum.filmorate.storage.dao.UserStorage;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * @author kazakov
@@ -19,13 +19,14 @@ import java.util.Set;
 @Slf4j
 @RequiredArgsConstructor
 public class UserService {
+
     private final UserStorage userStorage;
 
     public List<User> getUsers() {
         return userStorage.findAll();
     }
 
-    public User getUserById(int userId) {
+    public User getUserById(long userId) {
         return userStorage.findById(userId)
                 .orElseThrow(() -> new NotFoundException(String.format("Пользователь с id = %d не найден",userId)));
     }
@@ -41,37 +42,52 @@ public class UserService {
         return userStorage.save(user);
     }
 
-    public User addUserToFriends(int userId, int friendId) {
+    public User addUserToFriends(long userId, long otherUserId) {
         User user = getUserById(userId);
-        User friend = getUserById(friendId);
-        user.addToFriends(friendId);
-        friend.addToFriends(userId);
-        updateUser(user);
-        updateUser(friend);
+        User otherUser = getUserById(otherUserId);
+        if (user.getFriends().stream().noneMatch(friend -> friend.getFriendId() == otherUserId)) {
+            User.Friend friend = new User.Friend(userId, otherUserId, User.ConnectionType.Unconfirmed);
+            userStorage.addFriend(user, friend);
+        }
         return user;
     }
 
-    public User deleteUserFromFriends(int userId, int friendId) {
-        User user   = getUserById(userId);
-        User friend = getUserById(friendId);
-        user.deleteFromFriends(friendId);
-        friend.deleteFromFriends(userId);
-        updateUser(user);
-        updateUser(friend);
+    public User confirmUserAsFriend(long userId, long otherUserId) {
+        User user = getUserById(userId);
+        User otherUser = getUserById(otherUserId);
+        if (user.getFriends().stream().anyMatch(friend -> friend.getFriendId() == otherUserId)) {
+            User.Friend friend = new User.Friend(userId, otherUserId, User.ConnectionType.Confirmed);
+            userStorage.updateFriend(user, friend);
+        }
         return user;
     }
 
-    public List<User> getUserFriends(int userId) {
+    public User deleteUserFromFriends(long userId, long otherUserId) {
         User user = getUserById(userId);
-        return userStorage.findById(user.getFriends().keySet());
+        getUserById(otherUserId);
+        if (user.getFriends().stream().anyMatch(friend -> friend.getFriendId() == otherUserId)) {
+            userStorage.deleteFriend(user, otherUserId);
+        }
+        return user;
     }
 
-    public List<User> getCommonFriends(int userId, int otherId) {
+    public List<User> getUserFriends(long userId) {
+        User user = getUserById(userId);
+        return userStorage.findById(user.getFriends().stream()
+                .map(User.Friend::getFriendId)
+                .collect(Collectors.toSet()));
+    }
+
+    public List<User> getCommonFriends(long userId, long otherId) {
         User user      = getUserById(userId);
         User otherUser = getUserById(otherId);
 
-        Set<Long> intersection = new HashSet<>(user.getFriends().keySet());
-        intersection.retainAll(otherUser.getFriends().keySet());
+        Set<Long> intersection = user.getFriends().stream()
+                .map(User.Friend::getFriendId)
+                .collect(Collectors.toSet());
+        intersection.retainAll(otherUser.getFriends().stream()
+                .map(User.Friend::getFriendId)
+                .collect(Collectors.toSet()));
 
         return userStorage.findById(intersection);
     }
